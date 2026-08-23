@@ -308,11 +308,23 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
   color-scheme: dark;
 }
 
+.band {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .strip {
-  position: relative;
   height: var(--strip-h);
   border: 1px solid var(--rule);
 }
+
+/*
+ * That place's own hours. It sits below the band rather than on it: over the
+ * sky, a light rail vanishes at noon and a dark one vanishes at midnight, so
+ * the only ground that works at every hour is the page's own.
+ */
+.rail { height: 3px; }
 
 .place-time {
   text-align: right;
@@ -560,7 +572,7 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
     text-align: left;
     padding: 6px 12px 0 0;
   }
-  .strip { grid-column: 2; grid-row: 1 / span 2; }
+  .band { grid-column: 2; grid-row: 1 / span 2; }
   .time-btn { font-size: 17px; }
   .drop { right: 0; top: 50%; opacity: 1; }
   .win-edit input { width: 56px; }
@@ -637,7 +649,7 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
   </div>
 
   <p class="note">
-    Each place keeps its own hours, set in its own clock — click the hours under a name to change them.<br>
+    Each place keeps its own hours, set in its own clock — the rail under each band. Click the hours under a name to change them.<br>
     Flex is how far past those hours someone will stretch; that stretch reads as Maybe.<br>
     Drag anywhere across the bands, or click a time to set that place's hour directly.<br>
     Daylight saving is applied automatically. Band colour shows the shape of the local day; it is illustrative, not sunrise data.
@@ -699,6 +711,11 @@ const VERDICT_FILL = { works: "#f6e5bd", maybe: "#5d6b96", no: "#131a30" };
 
 // How much of the field is laid back over a band outside someone's hours.
 const VEIL = { works: "rgba(5,9,26,0)", maybe: "rgba(5,9,26,.52)", no: "rgba(5,9,26,.82)" };
+
+// The veil alone cannot mark an edge that falls in the middle of the night —
+// darkening near-black changes nothing. This rail carries the hours instead,
+// and reads the same against noon or midnight.
+const RAIL = { works: "rgba(246,229,189,.92)", maybe: "rgba(109,124,172,.9)", no: "rgba(0,0,0,0)" };
 
 /* ── small helpers ─────────────────────────────────── */
 
@@ -939,10 +956,10 @@ function skyGradient(zone) {
 }
 
 /**
- * A veil laid over the sky, clear only across that place's own hours.
- * Cuts land on the exact boundaries rather than on a sampling grid.
+ * The band split at that place's own boundaries. Cuts land on the exact
+ * edge times rather than on a sampling grid, so nothing smears.
  */
-function veilGradient(p) {
+function segments(p) {
   const span = state.winEnd - state.winStart;
   const cuts = new Set([0, 1]);
 
@@ -954,11 +971,19 @@ function veilGradient(p) {
   }
 
   const xs = Array.from(cuts).sort((a, b) => a - b);
-  const parts = [];
+  const out = [];
   for (let i = 0; i < xs.length - 1; i++) {
     const mid = (xs[i] + xs[i + 1]) / 2;
-    const c = VEIL[verdictAt(p, state.winStart + mid * span)];
-    parts.push(c + " " + (xs[i] * 100).toFixed(3) + "%", c + " " + (xs[i + 1] * 100).toFixed(3) + "%");
+    out.push({ a: xs[i], b: xs[i + 1], v: verdictAt(p, state.winStart + mid * span) });
+  }
+  return out;
+}
+
+function hardStops(segs, colours) {
+  const parts = [];
+  for (const s of segs) {
+    const c = colours[s.v];
+    parts.push(c + " " + (s.a * 100).toFixed(3) + "%", c + " " + (s.b * 100).toFixed(3) + "%");
   }
   return "linear-gradient(90deg," + parts.join(",") + ")";
 }
@@ -1005,16 +1030,26 @@ function renderAll() {
     win.addEventListener("click", () => openWindowEdit(i));
     id.appendChild(win);
 
+    const segs = segments(p);
+
     const strip = document.createElement("div");
     strip.className = "strip";
-    strip.style.backgroundImage = veilGradient(p) + "," + skyGradient(p.tz);
+    strip.style.backgroundImage = hardStops(segs, VEIL) + "," + skyGradient(p.tz);
+
+    const rail = document.createElement("div");
+    rail.className = "rail";
+    rail.style.backgroundImage = hardStops(segs, RAIL);
+
+    const band = document.createElement("div");
+    band.className = "band";
+    band.append(strip, rail);
 
     const time = document.createElement("div");
     time.className = "place-time";
     time.innerHTML = '<button class="time-btn" type="button"></button><div class="time-day"></div>';
     time.querySelector(".time-btn").addEventListener("click", () => openTimeEdit(i));
 
-    row.append(id, strip, time);
+    row.append(id, band, time);
 
     if (state.places.length > 1) {
       const drop = document.createElement("button");
