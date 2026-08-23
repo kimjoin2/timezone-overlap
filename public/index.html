@@ -686,35 +686,31 @@ const SNAP = 15;          // minutes
 const STRIP_SAMPLES = 72; // gradient stops per sky band
 const BAND_SAMPLES = 96;  // segments in the overlap ribbon
 
-// Sky ramp: local minute -> colour.
+// Sky ramp: local minute -> colour. Mirrored about noon — a real dusk runs
+// longer and more violet than dawn, but the lopsided band read as a mistake.
 const SKY = [
-  [   0, [ 10,  15,  36]],
-  [ 250, [ 11,  17,  40]],
-  [ 305, [ 23,  32,  63]],
-  [ 355, [ 59,  53,  96]],
-  [ 395, [138,  85, 112]],
-  [ 420, [227, 128, 107]],
-  [ 455, [240, 168, 120]],
-  [ 510, [191, 212, 232]],
-  [ 720, [220, 234, 245]],
-  [ 930, [195, 216, 236]],
-  [1045, [242, 160, 124]],
-  [1080, [196, 112, 143]],
-  [1112, [107,  74, 121]],
-  [1145, [ 42,  42,  82]],
-  [1200, [ 19,  26,  52]],
-  [1265, [ 10,  15,  36]],
+  [   0, [ 10,  15,  36]],   // night
+  [ 240, [ 10,  15,  36]],
+  [ 300, [ 26,  34,  68]],   // astronomical twilight
+  [ 360, [ 78,  62, 110]],   // violet
+  [ 390, [232, 132, 106]],   // sun on the horizon
+  [ 420, [244, 178, 138]],
+  [ 480, [196, 216, 234]],   // full morning
+  [ 720, [222, 236, 246]],   // noon
+  [ 960, [196, 216, 234]],
+  [1020, [244, 178, 138]],
+  [1050, [232, 132, 106]],
+  [1080, [ 78,  62, 110]],
+  [1140, [ 26,  34,  68]],
+  [1200, [ 10,  15,  36]],
   [1440, [ 10,  15,  36]]
 ];
 
 const VERDICT_FILL = { works: "#f6e5bd", maybe: "#5d6b96", no: "#131a30" };
 
-// How much of the field is laid back over a band outside someone's hours.
-const VEIL = { works: "rgba(5,9,26,0)", maybe: "rgba(5,9,26,.52)", no: "rgba(5,9,26,.82)" };
-
-// The veil alone cannot mark an edge that falls in the middle of the night —
-// darkening near-black changes nothing. This rail carries the hours instead,
-// and reads the same against noon or midnight.
+// The rail carries each place's hours. Dimming the band itself was tried and
+// dropped: it veiled one twilight and not the other, so every day looked
+// lopsided, and it hid the shear between rows that the bands exist to show.
 const RAIL = { works: "rgba(246,229,189,.92)", maybe: "rgba(109,124,172,.9)", no: "rgba(0,0,0,0)" };
 
 /* ── small helpers ─────────────────────────────────── */
@@ -956,7 +952,7 @@ function skyGradient(zone) {
 }
 
 /**
- * The band split at that place's own boundaries. Cuts land on the exact
+ * The rail split at that place's own boundaries. Cuts land on the exact
  * edge times rather than on a sampling grid, so nothing smears.
  */
 function segments(p) {
@@ -1034,7 +1030,7 @@ function renderAll() {
 
     const strip = document.createElement("div");
     strip.className = "strip";
-    strip.style.backgroundImage = hardStops(segs, VEIL) + "," + skyGradient(p.tz);
+    strip.style.backgroundImage = skyGradient(p.tz);
 
     const rail = document.createElement("div");
     rail.className = "rail";
