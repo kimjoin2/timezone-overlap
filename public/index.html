@@ -34,7 +34,7 @@
 
   --gut-l: 168px;
   --gut-r: 116px;
-  --strip-h: 38px;
+  --strip-h: 26px;
 }
 
 * { box-sizing: border-box; }
@@ -308,23 +308,10 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
   color-scheme: dark;
 }
 
-.band {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .strip {
   height: var(--strip-h);
   border: 1px solid var(--rule);
 }
-
-/*
- * That place's own hours. It sits below the band rather than on it: over the
- * sky, a light rail vanishes at noon and a dark one vanishes at midnight, so
- * the only ground that works at every hour is the page's own.
- */
-.rail { height: 3px; }
 
 .place-time {
   text-align: right;
@@ -572,7 +559,7 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
     text-align: left;
     padding: 6px 12px 0 0;
   }
-  .band { grid-column: 2; grid-row: 1 / span 2; }
+  .strip { grid-column: 2; grid-row: 1 / span 2; }
   .time-btn { font-size: 17px; }
   .drop { right: 0; top: 50%; opacity: 1; }
   .win-edit input { width: 56px; }
@@ -649,10 +636,10 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
   </div>
 
   <p class="note">
-    Each place keeps its own hours, set in its own clock — the rail under each band. Click the hours under a name to change them.<br>
+    Each place keeps its own hours, set in its own clock — click the hours under a name to change them.<br>
     Flex is how far past those hours someone will stretch; that stretch reads as Maybe.<br>
     Drag anywhere across the bands, or click a time to set that place's hour directly.<br>
-    Daylight saving is applied automatically. Band colour shows the shape of the local day; it is illustrative, not sunrise data.
+    Daylight saving is applied automatically — change the date and the offsets follow.
   </p>
 
 </div>
@@ -683,35 +670,18 @@ const DEFAULT_ZONES = [
 const RENAME = { "Pacific/Auckland": "Christchurch" };
 
 const SNAP = 15;          // minutes
-const STRIP_SAMPLES = 72; // gradient stops per sky band
 const BAND_SAMPLES = 96;  // segments in the overlap ribbon
 
-// Sky ramp: local minute -> colour. Mirrored about noon — a real dusk runs
-// longer and more violet than dawn, but the lopsided band read as a mistake.
-const SKY = [
-  [   0, [ 10,  15,  36]],   // night
-  [ 240, [ 10,  15,  36]],
-  [ 300, [ 26,  34,  68]],   // astronomical twilight
-  [ 360, [ 78,  62, 110]],   // violet
-  [ 390, [232, 132, 106]],   // sun on the horizon
-  [ 420, [244, 178, 138]],
-  [ 480, [196, 216, 234]],   // full morning
-  [ 720, [222, 236, 246]],   // noon
-  [ 960, [196, 216, 234]],
-  [1020, [244, 178, 138]],
-  [1050, [232, 132, 106]],
-  [1080, [ 78,  62, 110]],
-  [1140, [ 26,  34,  68]],
-  [1200, [ 10,  15,  36]],
-  [1440, [ 10,  15,  36]]
-];
-
-const VERDICT_FILL = { works: "#f6e5bd", maybe: "#5d6b96", no: "#131a30" };
-
-// The rail carries each place's hours. Dimming the band itself was tried and
-// dropped: it veiled one twilight and not the other, so every day looked
-// lopsided, and it hid the shear between rows that the bands exist to show.
-const RAIL = { works: "rgba(246,229,189,.92)", maybe: "rgba(109,124,172,.9)", no: "rgba(0,0,0,0)" };
+/*
+ * One colour language for every band. A row says when that place is free;
+ * the row on top says when everyone is.
+ *
+ * These bands used to paint the local sky, dawn through dusk. It looked good
+ * and it was a lie — sunrise was a constant, blind to latitude and season —
+ * and knowing whether the sun is up does not help anyone pick an hour. What
+ * helps is when each person is actually reachable, so that is what they show.
+ */
+const FILL = { works: "#f6e5bd", maybe: "#5d6b96", no: "#131a30" };
 
 /* ── small helpers ─────────────────────────────────── */
 
@@ -828,16 +798,6 @@ const worstOf = (list) => list.reduce((a, b) => (RANK[b] > RANK[a] ? b : a), "wo
 
 /* ── colour ────────────────────────────────────────── */
 
-function skyAt(minute) {
-  let i = 0;
-  while (i < SKY.length - 2 && SKY[i + 1][0] <= minute) i++;
-  const [m0, c0] = SKY[i];
-  const [m1, c1] = SKY[i + 1];
-  const t = m1 === m0 ? 0 : (minute - m0) / (m1 - m0);
-  const ch = (k) => Math.round(c0[k] + (c1[k] - c0[k]) * t);
-  return "rgb(" + ch(0) + "," + ch(1) + "," + ch(2) + ")";
-}
-
 /* ── state ─────────────────────────────────────────── */
 
 const state = {
@@ -941,18 +901,8 @@ function instantOfLocal(zone, localMin) {
 
 /* ── bands ─────────────────────────────────────────── */
 
-function skyGradient(zone) {
-  const span = state.winEnd - state.winStart;
-  const stops = [];
-  for (let i = 0; i <= STRIP_SAMPLES; i++) {
-    const f = i / STRIP_SAMPLES;
-    stops.push(skyAt(localMinutes(zone, state.winStart + f * span)) + " " + (f * 100).toFixed(2) + "%");
-  }
-  return "linear-gradient(90deg," + stops.join(",") + ")";
-}
-
 /**
- * The rail split at that place's own boundaries. Cuts land on the exact
+ * The band split at that place's own boundaries. Cuts land on the exact
  * edge times rather than on a sampling grid, so nothing smears.
  */
 function segments(p) {
@@ -992,7 +942,7 @@ function ribbonGradient() {
     const v = worstOf(state.places.map((p) => verdictAt(p, ms)));
     const a = ((i / BAND_SAMPLES) * 100).toFixed(3);
     const b = (((i + 1) / BAND_SAMPLES) * 100).toFixed(3);
-    parts.push(VERDICT_FILL[v] + " " + a + "%", VERDICT_FILL[v] + " " + b + "%");
+    parts.push(FILL[v] + " " + a + "%", FILL[v] + " " + b + "%");
   }
   return "linear-gradient(90deg," + parts.join(",") + ")";
 }
@@ -1026,26 +976,16 @@ function renderAll() {
     win.addEventListener("click", () => openWindowEdit(i));
     id.appendChild(win);
 
-    const segs = segments(p);
-
     const strip = document.createElement("div");
     strip.className = "strip";
-    strip.style.backgroundImage = skyGradient(p.tz);
-
-    const rail = document.createElement("div");
-    rail.className = "rail";
-    rail.style.backgroundImage = hardStops(segs, RAIL);
-
-    const band = document.createElement("div");
-    band.className = "band";
-    band.append(strip, rail);
+    strip.style.backgroundImage = hardStops(segments(p), FILL);
 
     const time = document.createElement("div");
     time.className = "place-time";
     time.innerHTML = '<button class="time-btn" type="button"></button><div class="time-day"></div>';
     time.querySelector(".time-btn").addEventListener("click", () => openTimeEdit(i));
 
-    row.append(id, band, time);
+    row.append(id, strip, time);
 
     if (state.places.length > 1) {
       const drop = document.createElement("button");
