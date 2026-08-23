@@ -32,9 +32,9 @@
   --body:    "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --gut-l: 152px;
+  --gut-l: 168px;
   --gut-r: 116px;
-  --strip-h: 34px;
+  --strip-h: 38px;
 }
 
 * { box-sizing: border-box; }
@@ -215,6 +215,7 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
 .legend {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
   margin-top: 12px;
   padding-left: var(--gut-l);
   font-family: var(--mono);
@@ -268,6 +269,43 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
   color: var(--faint);
   letter-spacing: .08em;
   margin-top: 2px;
+}
+
+/* the person's own hours, in their own clock */
+.win-btn {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-top: 3px;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .04em;
+  cursor: pointer;
+  border-bottom: 1px dotted transparent;
+}
+.win-btn:hover { color: var(--ink); border-bottom-color: var(--rule-hi); }
+
+.win-edit {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+.win-edit input {
+  appearance: none;
+  background: var(--panel);
+  border: 1px solid var(--rule-hi);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 2px 3px;
+  width: 62px;
+  color-scheme: dark;
 }
 
 .strip {
@@ -411,7 +449,6 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
   transform: translateX(-50%);
   padding-top: 5px;
   border-top: 1px solid var(--rule);
-  padding-left: 0;
 }
 .tick.edge { transform: none; }
 .tick.edge-r { transform: translateX(-100%); }
@@ -441,6 +478,31 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
 }
 .btn:hover { color: var(--ink); border-color: var(--rule-hi); }
 .btn-key { color: var(--ink); border-color: var(--rule-hi); }
+
+.flex-set {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--rule);
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.flex-set input {
+  appearance: none;
+  background: var(--panel);
+  border: 1px solid var(--rule-hi);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 3px 4px;
+  width: 44px;
+  text-align: right;
+  color-scheme: dark;
+}
 
 .adder { display: none; gap: 8px; align-items: center; }
 .adder.open { display: flex; }
@@ -486,9 +548,9 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
 .flash.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ── narrow ───────────────────────────────────────── */
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   /* the right gutter shrinks to just enough room for the remove control */
-  :root { --gut-l: 112px; --gut-r: 26px; --strip-h: 30px; }
+  :root { --gut-l: 118px; --gut-r: 26px; --strip-h: 34px; }
   .wrap { padding: 0 18px 60px; }
   .place-id { grid-column: 1; grid-row: 1; padding-right: 12px; }
   .place-name { font-size: 14px; }
@@ -501,6 +563,7 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
   .strip { grid-column: 2; grid-row: 1 / span 2; }
   .time-btn { font-size: 17px; }
   .drop { right: 0; top: 50%; opacity: 1; }
+  .win-edit input { width: 56px; }
   .legend, .tools, .note { padding-left: 0; }
   .adder input { min-width: 0; flex: 1; }
 }
@@ -568,14 +631,16 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
       <button class="btn" id="addOk">Add</button>
       <button class="btn" id="addCancel">Cancel</button>
     </div>
+    <label class="flex-set">Flex ±<input type="number" id="flex" min="0" max="6" step="1" aria-label="Flex hours">h</label>
     <button class="btn" id="copySummary">Copy summary</button>
     <button class="btn" id="copyLink">Copy link</button>
   </div>
 
   <p class="note">
-    Daylight saving is applied automatically — change the date and the offsets follow.<br>
+    Each place keeps its own hours, set in its own clock — click the hours under a name to change them.<br>
+    Flex is how far past those hours someone will stretch; that stretch reads as Maybe.<br>
     Drag anywhere across the bands, or click a time to set that place's hour directly.<br>
-    Band colour shows the shape of the local day; it is illustrative, not sunrise data.
+    Daylight saving is applied automatically. Band colour shows the shape of the local day; it is illustrative, not sunrise data.
   </p>
 
 </div>
@@ -588,6 +653,13 @@ body.is-no    .call strong { color: var(--no-ink); font-weight: 500; }
 
 /* ── configuration ─────────────────────────────────── */
 
+// Hours someone is normally reachable, in their own clock.
+const DEF_FROM = 9 * 60;
+const DEF_TO   = 22 * 60;
+
+// How far past those hours people will stretch. That stretch reads as Maybe.
+const DEF_FLEX = 2 * 60;
+
 const DEFAULT_ZONES = [
   "Asia/Seoul",
   "Europe/Paris",
@@ -598,15 +670,8 @@ const DEFAULT_ZONES = [
 // Where the common name differs from the IANA city.
 const RENAME = { "Pacific/Auckland": "Christchurch" };
 
-// One shared rule for every place, in local minutes from midnight.
-// Maybe runs to midnight: a 23:00 call is a stretch, not a refusal.
-const WORKS_FROM  = 9 * 60;
-const WORKS_TO    = 21 * 60;
-const MAYBE_FROM  = 7 * 60;
-const MAYBE_TO    = 24 * 60;
-
 const SNAP = 15;          // minutes
-const STRIP_SAMPLES = 72; // gradient stops per band
+const STRIP_SAMPLES = 72; // gradient stops per sky band
 const BAND_SAMPLES = 96;  // segments in the overlap ribbon
 
 // Sky ramp: local minute -> colour.
@@ -632,7 +697,30 @@ const SKY = [
 
 const VERDICT_FILL = { works: "#f6e5bd", maybe: "#5d6b96", no: "#131a30" };
 
-/* ── time helpers ──────────────────────────────────── */
+// How much of the field is laid back over a band outside someone's hours.
+const VEIL = { works: "rgba(5,9,26,0)", maybe: "rgba(5,9,26,.52)", no: "rgba(5,9,26,.82)" };
+
+/* ── small helpers ─────────────────────────────────── */
+
+const $ = (id) => document.getElementById(id);
+const mod1440 = (v) => ((v % 1440) + 1440) % 1440;
+
+const hhmm = (min) =>
+  String(Math.floor(min / 60) % 24).padStart(2, "0") + ":" + String(min % 60).padStart(2, "0");
+
+const toMin = (v) => {
+  const [h, m] = v.split(":").map(Number);
+  return h * 60 + m;
+};
+
+/** Is local minute `m` inside [from, to)? The range may cross midnight. */
+function inRange(m, from, to) {
+  if (from === to) return true;                       // the whole day
+  return from < to ? (m >= from && m < to)
+                   : (m >= from || m < to);
+}
+
+/* ── time ──────────────────────────────────────────── */
 
 const offsetCache = new Map();
 
@@ -660,7 +748,7 @@ function zoneOffset(zone, ms) {
 /** Local minutes past midnight in `zone` at the given instant. */
 function localMinutes(zone, ms) {
   const m = Math.floor(ms / 60000) + zoneOffset(zone, ms);
-  return ((m % 1440) + 1440) % 1440;
+  return mod1440(m);
 }
 
 /** UTC instant of local midnight in `zone` on the given calendar date. */
@@ -687,9 +775,6 @@ function offsetLabel(zone, ms) {
   return "UTC" + sign + String(Math.floor(a / 60)).padStart(2, "0") + ":" + String(a % 60).padStart(2, "0");
 }
 
-const hhmm = (min) =>
-  String(Math.floor(min / 60)).padStart(2, "0") + ":" + String(min % 60).padStart(2, "0");
-
 const weekday = (zone, ms) =>
   new Intl.DateTimeFormat("en-US", { timeZone: zone, weekday: "short" }).format(new Date(ms));
 
@@ -704,12 +789,24 @@ function placeName(zone) {
   return tail.replace(/_/g, " ");
 }
 
+function isRealZone(zone) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zone });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 /* ── judgement ─────────────────────────────────────── */
 
-function verdictAt(zone, ms) {
-  const m = localMinutes(zone, ms);
-  if (m >= WORKS_FROM && m < WORKS_TO) return "works";
-  if (m >= MAYBE_FROM && m < MAYBE_TO) return "maybe";
+function verdictAt(p, ms) {
+  const m = localMinutes(p.tz, ms);
+  if (inRange(m, p.from, p.to)) return "works";
+  if (state.flex > 0) {
+    if (inRange(m, mod1440(p.from - state.flex), p.from)) return "maybe";
+    if (inRange(m, p.to, mod1440(p.to + state.flex))) return "maybe";
+  }
   return "no";
 }
 
@@ -731,18 +828,26 @@ function skyAt(minute) {
 /* ── state ─────────────────────────────────────────── */
 
 const state = {
-  zones: DEFAULT_ZONES.slice(),
+  places: [],      // { tz, from, to } — from/to are local minutes
+  flex: DEF_FLEX,
   instant: 0,      // the moment under the cursor
   winStart: 0,
   winEnd: 0
 };
 
-let editing = null;  // zone currently being typed into
+let editing = null;
 
-const $ = (id) => document.getElementById(id);
+const defaultPlaces = () =>
+  DEFAULT_ZONES.map((tz) => ({ tz, from: DEF_FROM, to: DEF_TO }));
 
 /* ── url ───────────────────────────────────────────── */
 
+/*
+ * #tz=Asia/Seoul,Pacific/Auckland@0700-0100&flex=3&t=2026-08-23T11:00Z
+ *
+ * A place carries its own hours as @HHMM-HHMM, left off when they are the
+ * default. The first place in the list is the anchor for the axis.
+ */
 function readHash() {
   const raw = location.hash.replace(/^#/, "");
   if (!raw) return;
@@ -750,9 +855,25 @@ function readHash() {
 
   const tz = q.get("tz");
   if (tz) {
-    const list = tz.split(",").map((s) => s.trim()).filter(isRealZone);
-    if (list.length) state.zones = list;
+    const list = [];
+    for (const chunk of tz.split(",")) {
+      const [zone, win] = chunk.trim().split("@");
+      if (!zone || !isRealZone(zone)) continue;
+
+      const p = { tz: zone, from: DEF_FROM, to: DEF_TO };
+      const m = win && win.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+      if (m) {
+        const from = +m[1] * 60 + +m[2];
+        const to = +m[3] * 60 + +m[4];
+        if (from < 1440 && to <= 1440) { p.from = from; p.to = mod1440(to); }
+      }
+      list.push(p);
+    }
+    if (list.length) state.places = list;
   }
+
+  const flex = q.get("flex");
+  if (flex !== null && /^\d+$/.test(flex)) state.flex = Math.min(6, +flex) * 60;
 
   const t = q.get("t");
   if (t) {
@@ -762,18 +883,21 @@ function readHash() {
 }
 
 function writeHash() {
-  const q = new URLSearchParams();
-  q.set("tz", state.zones.join(","));
-  q.set("t", new Date(state.instant).toISOString().slice(0, 16) + "Z");
-  history.replaceState(null, "", "#" + q.toString().replace(/%2C/g, ",").replace(/%2F/g, "/"));
-}
+  const tz = state.places.map((p) => {
+    if (p.from === DEF_FROM && p.to === DEF_TO) return p.tz;
+    const pack = (v) => String(Math.floor(v / 60)).padStart(2, "0") + String(v % 60).padStart(2, "0");
+    return p.tz + "@" + pack(p.from) + "-" + pack(p.to);
+  }).join(",");
 
-function isRealZone(zone) {
+  const bits = ["tz=" + tz];
+  if (state.flex !== DEF_FLEX) bits.push("flex=" + state.flex / 60);
+  bits.push("t=" + new Date(state.instant).toISOString().slice(0, 16) + "Z");
+
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone: zone });
-    return true;
+    history.replaceState(null, "", "#" + bits.join("&"));
   } catch (e) {
-    return false;
+    // Opened straight from disk — some browsers refuse to rewrite a file:// URL.
+    // Everything still works; the address bar just stops tracking state.
   }
 }
 
@@ -781,7 +905,7 @@ function isRealZone(zone) {
 
 /** The 24-hour span shown is the anchor place's local day around `instant`. */
 function setWindow() {
-  const anchor = state.zones[0];
+  const anchor = state.places[0].tz;
   const { y, m, d } = zoneDate(anchor, state.instant);
   state.winStart = zoneMidnight(anchor, y, m, d);
   const nx = new Date(Date.UTC(y, m - 1, d + 1));
@@ -796,25 +920,55 @@ function instantAt(frac) {
   return Math.round(raw / (SNAP * 60000)) * (SNAP * 60000);
 }
 
-/* ── rendering ─────────────────────────────────────── */
+/** The moment inside the window when `zone` reads `localMin`. */
+function instantOfLocal(zone, localMin) {
+  const at0 = localMinutes(zone, state.winStart);
+  return state.winStart + mod1440(localMin - at0) * 60000;
+}
 
-function buildStripGradient(zone) {
+/* ── bands ─────────────────────────────────────────── */
+
+function skyGradient(zone) {
   const span = state.winEnd - state.winStart;
   const stops = [];
   for (let i = 0; i <= STRIP_SAMPLES; i++) {
     const f = i / STRIP_SAMPLES;
-    const min = localMinutes(zone, state.winStart + f * span);
-    stops.push(skyAt(min) + " " + (f * 100).toFixed(2) + "%");
+    stops.push(skyAt(localMinutes(zone, state.winStart + f * span)) + " " + (f * 100).toFixed(2) + "%");
   }
   return "linear-gradient(90deg," + stops.join(",") + ")";
 }
 
-function buildRibbonGradient() {
+/**
+ * A veil laid over the sky, clear only across that place's own hours.
+ * Cuts land on the exact boundaries rather than on a sampling grid.
+ */
+function veilGradient(p) {
+  const span = state.winEnd - state.winStart;
+  const cuts = new Set([0, 1]);
+
+  const edges = [p.from, p.to];
+  if (state.flex > 0) edges.push(mod1440(p.from - state.flex), mod1440(p.to + state.flex));
+  for (const local of edges) {
+    const f = fracOf(instantOfLocal(p.tz, local));
+    if (f > 0 && f < 1) cuts.add(f);
+  }
+
+  const xs = Array.from(cuts).sort((a, b) => a - b);
+  const parts = [];
+  for (let i = 0; i < xs.length - 1; i++) {
+    const mid = (xs[i] + xs[i + 1]) / 2;
+    const c = VEIL[verdictAt(p, state.winStart + mid * span)];
+    parts.push(c + " " + (xs[i] * 100).toFixed(3) + "%", c + " " + (xs[i + 1] * 100).toFixed(3) + "%");
+  }
+  return "linear-gradient(90deg," + parts.join(",") + ")";
+}
+
+function ribbonGradient() {
   const span = state.winEnd - state.winStart;
   const parts = [];
   for (let i = 0; i < BAND_SAMPLES; i++) {
     const ms = state.winStart + ((i + 0.5) / BAND_SAMPLES) * span;
-    const v = worstOf(state.zones.map((z) => verdictAt(z, ms)));
+    const v = worstOf(state.places.map((p) => verdictAt(p, ms)));
     const a = ((i / BAND_SAMPLES) * 100).toFixed(3);
     const b = (((i + 1) / BAND_SAMPLES) * 100).toFixed(3);
     parts.push(VERDICT_FILL[v] + " " + a + "%", VERDICT_FILL[v] + " " + b + "%");
@@ -822,64 +976,72 @@ function buildRibbonGradient() {
   return "linear-gradient(90deg," + parts.join(",") + ")";
 }
 
+/* ── rendering ─────────────────────────────────────── */
+
 function renderAll() {
   setWindow();
   offsetCache.clear();
 
   const stack = $("stack");
   const scrub = $("scrub");
-
-  // rows are rebuilt; the scrub layer is kept
   for (const el of Array.from(stack.querySelectorAll(".place"))) el.remove();
 
-  state.zones.forEach((zone) => {
+  state.places.forEach((p, i) => {
     const row = document.createElement("div");
     row.className = "place";
-    row.dataset.zone = zone;
+    row.dataset.i = String(i);
 
     const id = document.createElement("div");
     id.className = "place-id";
-    id.innerHTML =
-      '<div class="place-name"></div><div class="place-off"></div>';
-    id.querySelector(".place-name").textContent = placeName(zone);
-    id.querySelector(".place-off").textContent = offsetLabel(zone, state.instant);
+    id.innerHTML = '<div class="place-name"></div><div class="place-off"></div>';
+    id.querySelector(".place-name").textContent = placeName(p.tz);
+    id.querySelector(".place-off").textContent = offsetLabel(p.tz, state.instant);
+
+    const win = document.createElement("button");
+    win.className = "win-btn";
+    win.type = "button";
+    win.textContent = hhmm(p.from) + "–" + hhmm(p.to);
+    win.setAttribute("aria-label", "Hours for " + placeName(p.tz));
+    win.addEventListener("click", () => openWindowEdit(i));
+    id.appendChild(win);
 
     const strip = document.createElement("div");
     strip.className = "strip";
-    strip.style.backgroundImage = buildStripGradient(zone);
+    strip.style.backgroundImage = veilGradient(p) + "," + skyGradient(p.tz);
 
     const time = document.createElement("div");
     time.className = "place-time";
-    time.innerHTML =
-      '<button class="time-btn" type="button"></button><div class="time-day"></div>';
+    time.innerHTML = '<button class="time-btn" type="button"></button><div class="time-day"></div>';
+    time.querySelector(".time-btn").addEventListener("click", () => openTimeEdit(i));
 
-    if (state.zones.length > 1) {
+    row.append(id, strip, time);
+
+    if (state.places.length > 1) {
       const drop = document.createElement("button");
       drop.className = "drop";
       drop.type = "button";
       drop.textContent = "×";
-      drop.setAttribute("aria-label", "Remove " + placeName(zone));
+      drop.setAttribute("aria-label", "Remove " + placeName(p.tz));
       drop.addEventListener("click", () => {
-        state.zones = state.zones.filter((z) => z !== zone);
+        state.places.splice(i, 1);
         renderAll();
         writeHash();
       });
-      time.appendChild(drop);
+      row.appendChild(drop);
     }
 
-    time.querySelector(".time-btn").addEventListener("click", () => openTimeEdit(zone));
-
-    row.append(id, strip, time);
     stack.insertBefore(row, scrub);
   });
 
-  $("ribbon").style.backgroundImage = buildRibbonGradient();
+  $("ribbon").style.backgroundImage = ribbonGradient();
+  $("flex").value = String(state.flex / 60);
   renderTicks();
   update();
 }
 
 function renderTicks() {
-  const anchor = state.zones[0];
+  if (!state.places.length) return;
+  const anchor = state.places[0].tz;
   $("axisName").textContent = placeName(anchor) + " time";
 
   const box = $("ticks");
@@ -896,35 +1058,33 @@ function renderTicks() {
 
 function update() {
   const ms = state.instant;
-  const anchor = state.zones[0];
+  const anchor = state.places[0].tz;
 
   $("cursor").style.left = (fracOf(ms) * 100).toFixed(3) + "%";
 
-  const verdicts = state.zones.map((z) => verdictAt(z, ms));
+  const verdicts = state.places.map((p) => verdictAt(p, ms));
   const overall = worstOf(verdicts);
 
-  // headline
   $("clock").textContent = hhmm(localMinutes(anchor, ms));
   $("clockPlace").textContent = placeName(anchor).toUpperCase();
   $("clockUtc").textContent =
     longDate(anchor, ms) + "  ·  " + new Date(ms).toISOString().slice(11, 16) + " UTC";
 
-  // per-place readouts
-  state.zones.forEach((zone, i) => {
-    const row = document.querySelector('.place[data-zone="' + CSS.escape(zone) + '"]');
+  state.places.forEach((p, i) => {
+    const row = document.querySelector('.place[data-i="' + i + '"]');
     if (!row) return;
-    row.querySelector(".time-btn").textContent = hhmm(localMinutes(zone, ms));
+    const btn = row.querySelector(".time-btn");
+    if (btn) btn.textContent = hhmm(localMinutes(p.tz, ms));
     row.querySelector(".time-day").innerHTML =
-      weekday(zone, ms).toUpperCase() +
+      weekday(p.tz, ms).toUpperCase() +
       ' <span class="v-' + verdicts[i] + '">· ' + verdicts[i].toUpperCase() + "</span>";
   });
 
-  // the call
   document.body.classList.toggle("is-works", overall === "works");
   document.body.classList.toggle("is-no", overall === "no");
 
   const named = (want) =>
-    state.zones.filter((_, i) => verdicts[i] === want).map(placeName).join(", ");
+    state.places.filter((_, i) => verdicts[i] === want).map((p) => placeName(p.tz)).join(", ");
 
   const call = $("call");
   if (overall === "works") {
@@ -935,7 +1095,6 @@ function update() {
     call.innerHTML = "No — <em>out for</em> <strong>" + named("no") + "</strong>.";
   }
 
-  // date field follows the anchor's local day
   const { y, m, d } = zoneDate(anchor, ms);
   $("date").value = y + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0");
 
@@ -947,25 +1106,80 @@ function update() {
   );
 }
 
-/* ── time editing per place ────────────────────────── */
+/* ── editing a place's hours ───────────────────────── */
 
-function openTimeEdit(zone) {
+function mkTimeInput(value) {
+  const el = document.createElement("input");
+  el.type = "time";
+  el.step = String(SNAP * 60);
+  el.value = value;
+  return el;
+}
+
+function openWindowEdit(i) {
   if (editing) return;
-  editing = zone;
+  editing = "win";
 
-  const row = document.querySelector('.place[data-zone="' + CSS.escape(zone) + '"]');
+  const p = state.places[i];
+  const row = document.querySelector('.place[data-i="' + i + '"]');
+  const btn = row.querySelector(".win-btn");
+
+  const box = document.createElement("span");
+  box.className = "win-edit";
+  const a = mkTimeInput(hhmm(p.from));
+  const b = mkTimeInput(hhmm(p.to));
+  box.append(a, document.createTextNode("–"), b);
+
+  let done = false;
+  const finish = (apply) => {
+    if (done) return;
+    done = true;
+    editing = null;
+
+    const av = a.value, bv = b.value;
+    box.replaceWith(btn);
+    if (!apply || !av || !bv) return;
+
+    p.from = toMin(av);
+    p.to = toMin(bv);
+    renderAll();
+    writeHash();
+  };
+
+  // moving between the two fields is not leaving the editor
+  const onBlur = (e) => {
+    if (box.contains(e.relatedTarget)) return;
+    finish(true);
+  };
+
+  for (const el of [a, b]) {
+    el.addEventListener("blur", onBlur);
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); el.blur(); }
+      if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    });
+  }
+
+  btn.replaceWith(box);
+  a.focus();
+}
+
+/* ── editing the moment, from one place's clock ────── */
+
+function openTimeEdit(i) {
+  if (editing) return;
+  editing = "time";
+
+  const p = state.places[i];
+  const row = document.querySelector('.place[data-i="' + i + '"]');
   const btn = row.querySelector(".time-btn");
 
-  const input = document.createElement("input");
-  input.type = "time";
+  const input = mkTimeInput(hhmm(localMinutes(p.tz, state.instant)));
   input.className = "time-edit";
-  input.step = String(SNAP * 60);
-  input.value = hhmm(localMinutes(zone, state.instant));
 
   // A native time input fires `change` on every finished segment, so typing
   // the first digit of the hour would commit "01". Settle on blur instead.
   let done = false;
-
   const finish = (apply) => {
     if (done) return;
     done = true;
@@ -975,10 +1189,8 @@ function openTimeEdit(zone) {
     input.replaceWith(btn);
     if (!apply || !v) return;
 
-    const [h, mi] = v.split(":").map(Number);
-    const target = h * 60 + mi;
-    const here = localMinutes(zone, state.instant);
-    const delta = ((((target - here + 720) % 1440) + 1440) % 1440) - 720;
+    const here = localMinutes(p.tz, state.instant);
+    const delta = mod1440(toMin(v) - here + 720) - 720;
 
     state.instant += delta * 60000;
     renderAll();
@@ -997,17 +1209,13 @@ function openTimeEdit(zone) {
 
 /* ── scrubbing ─────────────────────────────────────── */
 
-function pointerToInstant(clientX) {
-  const r = $("scrub").getBoundingClientRect();
-  return instantAt((clientX - r.left) / r.width);
-}
-
 function initScrub() {
   const scrub = $("scrub");
   let dragging = false;
 
   const move = (e) => {
-    state.instant = pointerToInstant(e.clientX);
+    const r = scrub.getBoundingClientRect();
+    state.instant = instantAt((e.clientX - r.left) / r.width);
     update();
   };
 
@@ -1018,8 +1226,6 @@ function initScrub() {
     scrub.focus();
     move(e);
   });
-
-  scrub.addEventListener("blur", () => delete scrub.dataset.pointer);
 
   scrub.addEventListener("pointermove", (e) => {
     if (dragging) move(e);
@@ -1032,6 +1238,7 @@ function initScrub() {
   };
   scrub.addEventListener("pointerup", end);
   scrub.addEventListener("pointercancel", end);
+  scrub.addEventListener("blur", () => delete scrub.dataset.pointer);
 
   scrub.addEventListener("keydown", (e) => {
     delete scrub.dataset.pointer;
@@ -1046,11 +1253,8 @@ function initScrub() {
     if (!handled) return;
     e.preventDefault();
 
-    if (state.instant < state.winStart || state.instant >= state.winEnd) {
-      renderAll();
-    } else {
-      update();
-    }
+    if (state.instant < state.winStart || state.instant >= state.winEnd) renderAll();
+    else update();
     writeHash();
   });
 }
@@ -1058,13 +1262,12 @@ function initScrub() {
 /* ── controls ──────────────────────────────────────── */
 
 function shiftDay(days) {
-  const anchor = state.zones[0];
+  const anchor = state.places[0].tz;
   const { y, m, d } = zoneDate(anchor, state.instant);
-  const minsIntoDay = localMinutes(anchor, state.instant);
+  const into = localMinutes(anchor, state.instant);
   const nx = new Date(Date.UTC(y, m - 1, d + days));
   state.instant =
-    zoneMidnight(anchor, nx.getUTCFullYear(), nx.getUTCMonth() + 1, nx.getUTCDate()) +
-    minsIntoDay * 60000;
+    zoneMidnight(anchor, nx.getUTCFullYear(), nx.getUTCMonth() + 1, nx.getUTCDate()) + into * 60000;
   renderAll();
   writeHash();
 }
@@ -1088,22 +1291,18 @@ async function copyText(text, msg) {
 
 function summaryText() {
   const ms = state.instant;
-  const anchor = state.zones[0];
-  const width = Math.max(...state.zones.map((z) => placeName(z).length));
+  const anchor = state.places[0].tz;
+  const width = Math.max(...state.places.map((p) => placeName(p.tz).length));
 
-  const lines = state.zones.map((z) => {
-    const v = verdictAt(z, ms);
-    return (
-      placeName(z).padEnd(width + 3) +
-      weekday(z, ms) + " " + hhmm(localMinutes(z, ms)) +
-      "   " + v.charAt(0).toUpperCase() + v.slice(1)
-    );
+  const lines = state.places.map((p) => {
+    const v = verdictAt(p, ms);
+    return placeName(p.tz).padEnd(width + 3) +
+      weekday(p.tz, ms) + " " + hhmm(localMinutes(p.tz, ms)) +
+      "   " + v.charAt(0).toUpperCase() + v.slice(1);
   });
 
-  return (
-    longDate(anchor, ms) + "  ·  " + new Date(ms).toISOString().slice(11, 16) + " UTC\n\n" +
-    lines.join("\n") + "\n\n" + location.href
-  );
+  return longDate(anchor, ms) + "  ·  " + new Date(ms).toISOString().slice(11, 16) + " UTC\n\n" +
+    lines.join("\n") + "\n\n" + location.href;
 }
 
 function initControls() {
@@ -1120,9 +1319,16 @@ function initControls() {
     const v = e.target.value;
     if (!v) return;
     const [y, m, d] = v.split("-").map(Number);
-    const anchor = state.zones[0];
-    const minsIntoDay = localMinutes(anchor, state.instant);
-    state.instant = zoneMidnight(anchor, y, m, d) + minsIntoDay * 60000;
+    const anchor = state.places[0].tz;
+    const into = localMinutes(anchor, state.instant);
+    state.instant = zoneMidnight(anchor, y, m, d) + into * 60000;
+    renderAll();
+    writeHash();
+  });
+
+  $("flex").addEventListener("change", (e) => {
+    const h = Math.max(0, Math.min(6, Math.round(+e.target.value || 0)));
+    state.flex = h * 60;
     renderAll();
     writeHash();
   });
@@ -1148,8 +1354,8 @@ function initControls() {
     const v = addInput.value.trim();
     if (!v) return;
     if (!isRealZone(v)) { flash("No zone named " + v); return; }
-    if (state.zones.includes(v)) { flash("Already on the list"); closeAdder(); return; }
-    state.zones.push(v);
+    if (state.places.some((p) => p.tz === v)) { flash("Already on the list"); closeAdder(); return; }
+    state.places.push({ tz: v, from: DEF_FROM, to: DEF_TO });
     closeAdder();
     renderAll();
     writeHash();
@@ -1181,6 +1387,7 @@ function fillZoneList() {
 
 /* ── boot ──────────────────────────────────────────── */
 
+state.places = defaultPlaces();
 state.instant = Math.round(Date.now() / (SNAP * 60000)) * (SNAP * 60000);
 readHash();
 fillZoneList();
