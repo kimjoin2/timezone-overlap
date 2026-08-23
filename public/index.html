@@ -850,8 +850,18 @@ function readHash() {
 
   const t = q.get("t");
   if (t) {
-    const ms = Date.parse(t);
-    if (!Number.isNaN(ms)) state.instant = ms;
+    /*
+     * A hand-edited "2026-08-23T20:00" with no zone would parse as the
+     * reader's own local time, so a link written in Seoul would name a
+     * different moment in Paris — silently. Read it as UTC instead.
+     * A date with no time is already UTC by spec, so leave that alone.
+     */
+    const zoned = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(t);
+    const ms = Date.parse(t.includes("T") && !zoned ? t + "Z" : t);
+
+    // Down to the minute, because that is all writeHash puts back. Otherwise a
+    // link carrying seconds renders one moment and reloads as another.
+    if (!Number.isNaN(ms)) state.instant = Math.floor(ms / 60000) * 60000;
   }
 }
 
