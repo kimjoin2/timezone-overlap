@@ -2,6 +2,8 @@
 
 여러 나라에 흩어진 사람들끼리 모일 시간을 잡을 때, **모두가 가능한 구간을 눈으로 찾는** 한 장짜리 웹페이지.
 
+**https://tz-overlap.b7g.pro**
+
 빌드 없음 · 의존성 0 · 서버 없음. `public/index.html` 파일 하나가 전부다.
 
 ## 왜 이렇게 생겼나
@@ -81,13 +83,21 @@ cd public && python3 -m http.server 8777
 
 ## 배포
 
-Cloudflare (b7g-blog와 같은 방식 — `wrangler.jsonc`의 assets 디렉토리).
+**Cloudflare Workers 정적 자산**이다. Pages가 아니다.
 
 ```sh
 npx wrangler deploy
 ```
 
-빌드 단계가 없으므로 `public/`이 그대로 올라간다.
+빌드 단계가 없으므로 `public/`이 그대로 올라간다. `wrangler.jsonc`에 프로젝트 이름·에셋 폴더·커스텀 도메인이 전부 적혀 있어서 대시보드에서 누를 것이 없다. GitHub 레포도 필요 없다.
+
+**왜 Pages가 아닌가**: Pages에 git 레포를 연결하는 건 브라우저 OAuth라 CLI로 자동화가 안 되고(`wrangler pages project create`에 관련 옵션 자체가 없다), Pages 프로젝트에 커스텀 도메인을 붙이는 명령도 없다. Workers 쪽은 `routes`에 `custom_domain: true`를 적으면 배포하면서 DNS 레코드까지 만들어 준다.
+
+**트레이드오프**: push하면 자동 배포되는 건 없다. 고칠 때마다 위 명령을 친다. 자동 배포가 필요해지면 GitHub 레포를 만들고 대시보드에서 연결하면 되고, 지금 구성이 그걸 막지 않는다.
+
+첫 배포 전 `npx wrangler login` 한 번(브라우저 OAuth). 커스텀 도메인은 붙는 데 1분쯤 걸리며, 그 사이에는 500이 뜬다.
+
+참고로 b7g-blog도 Pages가 아니라 Workers다(`wrangler pages project list`가 비어 있다). 루트 `CLAUDE.md`의 "Cloudflare Pages" 표기는 실제와 다르다.
 
 ## 알아둘 것
 
